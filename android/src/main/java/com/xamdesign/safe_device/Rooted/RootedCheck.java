@@ -24,7 +24,9 @@ public class RootedCheck {
     public static boolean isJailBroken(Context context) {
         CheckApiVersion check;
 
+        // Special handling for Xiaomi devices (including Redmi)
         String brand = Build.BRAND.toLowerCase();
+        
         if(brand.contains("vivo")){
             return false;
         } else if (Build.VERSION.SDK_INT >= 23) {
@@ -51,8 +53,6 @@ public class RootedCheck {
         // Dangerous properties check (more lenient for Samsung development devices)
         boolean dangerousProps = checkDangerousProps(isDevelopmentEnvironment);
 
-        // Special handling for Xiaomi devices (including Redmi)
-        String brand = Build.BRAND.toLowerCase();
         if (brand.contains("xiaomi") || brand.contains("redmi") || brand.contains("poco")) {
             // For Xiaomi devices, use only the most reliable detection methods
             // MIUI can cause false positives, so be more conservative
