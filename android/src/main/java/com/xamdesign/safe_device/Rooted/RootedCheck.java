@@ -22,24 +22,18 @@ public class RootedCheck {
      *         otherwise.
      */
     public static boolean isJailBroken(Context context) {
-        CheckApiVersion check;
-
         // Special handling for Xiaomi devices (including Redmi)
         String brand = Build.BRAND.toLowerCase();
         
         if(brand.contains("vivo")){
             return false;
-        } else if (Build.VERSION.SDK_INT >= 23) {
-            check = new GreaterThan23();
-        } else {
-            check = new LessThan23();
         }
 
         // Check if this is a development environment
         boolean isDevelopmentEnvironment = isDevelopmentEnvironment();
 
         // Basic file system checks
-        boolean basicRootCheck = check.checkRooted();
+        boolean basicRootCheck = checkRooted();
 
         // RootBeer library check
         boolean rootBeerResult = rootBeerCheck(context);
@@ -80,12 +74,7 @@ public class RootedCheck {
     public static Map<String, Object> getRootDetectionDetails(Context context) {
         Map<String, Object> details = new HashMap<>();
 
-        CheckApiVersion check;
-        if (Build.VERSION.SDK_INT >= 23) {
-            check = new GreaterThan23();
-        } else {
-            check = new LessThan23();
-        }
+        // Removed dynamic checkApiVersion as minSDK is 29
 
         // Device info
         details.put("brand", Build.BRAND.toLowerCase());
@@ -100,7 +89,7 @@ public class RootedCheck {
         details.put("isDevelopmentEnvironment", isDevelopmentEnvironment);
 
         // Individual detection methods
-        details.put("basicRootCheck", check.checkRooted());
+        details.put("basicRootCheck", checkRooted());
         details.put("rootBeerCheck", rootBeerCheck(context));
         details.put("emulatorSpecificRoot", checkEmulatorSpecificRoot());
         details.put("suBinaryFound", checkSuBinary());
@@ -374,6 +363,41 @@ public class RootedCheck {
             return (String) get.invoke(systemProperties, property);
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private static boolean checkRooted() {
+        return checkRootMethod1() || checkRootMethod2();
+    }
+
+    private static boolean checkRootMethod1() {
+        String[] paths = {
+                "/system/app/Superuser.apk",
+                "/sbin/su",
+                "/system/bin/su",
+                "/system/xbin/su",
+                "/data/local/xbin/su",
+                "/data/local/bin/su",
+                "/system/sd/xbin/su",
+                "/system/bin/failsafe/su",
+                "/data/local/su"};
+        for (String path : paths) {
+            if (new java.io.File(path).exists()) return true;
+        }
+        return false;
+    }
+
+    private static boolean checkRootMethod2() {
+        Process process = null;
+        try {
+            process = Runtime.getRuntime().exec(new String[] { "/system/xbin/which", "su" });
+            java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()));
+            if (in.readLine() != null) return true;
+            return false;
+        } catch (Throwable t) {
+            return false;
+        } finally {
+            if (process != null) process.destroy();
         }
     }
 }
